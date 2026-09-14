@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cliente {
+  id_cliente     Int            @id @default(autoincrement())
+  nombre_cliente String         @db.VarChar(100)
+  cedula         String         @unique @db.VarChar(20)
+  correo         String         @unique @db.VarChar(100)
+  telefono       String         @db.VarChar(20)
+  Factura        Factura[]
+  MotoCliente    MotoCliente[]
+  VentaDirecta   VentaDirecta[]
+  reserva        reserva[]
+}
+
+model Factura {
+  id_factura         Int            @id @default(autoincrement())
+  fecha              DateTime       @default(now())
+  pago_efectivo      Decimal        @default(0) @db.Decimal(12, 2)
+  pago_tarjeta       Decimal        @default(0) @db.Decimal(12, 2)
+  pago_transferencia Decimal        @default(0) @db.Decimal(12, 2)
+  subtotal           Decimal        @default(0) @db.Decimal(12, 2)
+  iva                Decimal        @default(0) @db.Decimal(12, 2)
+  total              Decimal        @default(0) @db.Decimal(12, 2)
+  id_cliente         Int
+  id_orden_servicio  Int?           @unique
+  id_venta_directa   Int?           @unique
+  descuento          Decimal        @default(0) @db.Decimal(12, 2)
+  vendedor           String         @default("Por asignar") @db.VarChar(100)
+  Cliente            Cliente        @relation(fields: [id_cliente], references: [id_cliente], onDelete: Cascade)
+  OrdenServicio      OrdenServicio? @relation(fields: [id_orden_servicio], references: [id_orden_servicio], onDelete: Cascade)
+  VentaDirecta       VentaDirecta?  @relation(fields: [id_venta_directa], references: [id_venta], onDelete: Cascade)
+}
+
+model MarcaRepuesto {
+  id_marca     Int        @id @default(autoincrement())
+  nombre_marca String     @unique @db.VarChar(50)
+  Repuesto     Repuesto[]
+}
+
+model MotoCliente {
+  id_moto_cliente Int             @id @default(autoincrement())
+  marca           String          @db.VarChar(50)
+  modelo          String          @db.VarChar(50)
+  ano             Int
+  placa           String          @unique @db.VarChar(20)
+  id_cliente      Int
+  Cliente         Cliente         @relation(fields: [id_cliente], references: [id_cliente], onDelete: Cascade)
+  OrdenServicio   OrdenServicio[]
+}
+
+model MotoMercado {
+  id_moto_mercado Int            @id @default(autoincrement())
+  modelo          String         @unique @db.VarChar(50)
+  MotoRepuesto    MotoRepuesto[]
+}
+
+model MotoRepuesto {
+  id_moto_mercado Int
+  id_repuesto     Int
+  MotoMercado     MotoMercado @relation(fields: [id_moto_mercado], references: [id_moto_mercado], onDelete: Cascade)
+  Repuesto        Repuesto    @relation(fields: [id_repuesto], references: [id_repuesto], onDelete: Cascade)
+
+  @@id([id_moto_mercado, id_repuesto])
+}
+
+model OrdenServicio {
+  id_orden_servicio                                              Int                     @id @default(autoincrement())
+  fecha                                                          DateTime                @default(now())
+  estado                                                         String                  @db.VarChar(50)
+  subtotal                                                       Decimal                 @default(0) @db.Decimal(12, 2)
+  iva                                                            Decimal                 @default(0) @db.Decimal(12, 2)
+  total                                                          Decimal                 @db.Decimal(12, 2)
+  adelanto_efectivo                                              Decimal                 @default(0) @db.Decimal(12, 2)
+  adelanto_tarjeta                                               Decimal                 @default(0) @db.Decimal(12, 2)
+  adelanto_transferencia                                         Decimal                 @default(0) @db.Decimal(12, 2)
+  guardar_cascos                                                 Boolean
+  guardar_papeles                                                Boolean
+  observaciones                                                  String
+  id_moto_cliente                                                Int
+  descuento                                                      Decimal                 @default(0) @db.Decimal(12, 2)
+  observaciones_mecanico                                         String                  @default("Por asignar")
+  vendedor                                                       String                  @default("Por asignar") @db.VarChar(100)
+  observaciones_factura                                          String                  @default("Por asignar")
+  id_notificaciones                                              Int?
+  Factura                                                        Factura?
+  MotoCliente                                                    MotoCliente             @relation(fields: [id_moto_cliente], references: [id_moto_cliente], onDelete: Cascade)
+  notificaciones_OrdenServicio_id_notificacionesTonotificaciones notificaciones?         @relation("OrdenServicio_id_notificacionesTonotificaciones", fields: [id_notificaciones], references: [id_notificaciones], onDelete: NoAction, onUpdate: NoAction, map: "fk_notificaciones")
+  RepuestoOrdenServicio                                          RepuestoOrdenServicio[]
+  ServicioOrdenServicio                                          ServicioOrdenServicio[]
+  notificaciones_notificaciones_id_orden_servicioToOrdenServicio notificaciones[]        @relation("notificaciones_id_orden_servicioToOrdenServicio")
+  mecanico                                                       String                  @default("Por asignar") @db.VarChar(100)
+}
+
+model Proveedor {
+  id_proveedor      Int                 @id @default(autoincrement())
+  nombre_proveedor  String              @db.VarChar(100)
+  nit               String              @unique @db.VarChar(20)
+  telefono          String              @db.VarChar(20)
+  asesor            String              @db.VarChar(100)
+  fecha_vencimiento DateTime
+  ProveedorRepuesto ProveedorRepuesto[]
+}
+
+model ProveedorRepuesto {
+  id_proveedor Int
+  id_repuesto  Int
+  Proveedor    Proveedor @relation(fields: [id_proveedor], references: [id_proveedor], onDelete: Cascade)
+  Repuesto     Repuesto  @relation(fields: [id_repuesto], references: [id_repuesto], onDelete: Cascade)
+
+  @@id([id_proveedor, id_repuesto])
+}
+
+model Repuesto {
+  id_repuesto           Int                     @id @default(autoincrement())
+  codigo_barras         String                  @unique @db.VarChar(50)
+  nombre_repuesto       String                  @db.VarChar(100)
+  valor_unitario        Decimal                 @db.Decimal(12, 2)
+  ubicacion             String                  @default("Bodega") @db.VarChar(100)
+  stock                 Int                     @default(0)
+  id_marca              Int
+  valor_compra          Decimal                 @default(0) @db.Decimal(12, 2)
+  MotoRepuesto          MotoRepuesto[]
+  ProveedorRepuesto     ProveedorRepuesto[]
+  MarcaRepuesto         MarcaRepuesto           @relation(fields: [id_marca], references: [id_marca], onDelete: Cascade)
+  RepuestoOrdenServicio RepuestoOrdenServicio[]
+  RepuestoVenta         RepuestoVenta[]
+}
+
+model RepuestoOrdenServicio {
+  id_orden_servicio Int
+  id_repuesto       Int
+  cantidad          Int
+  precio            Decimal       @db.Decimal(12, 2)
+  OrdenServicio     OrdenServicio @relation(fields: [id_orden_servicio], references: [id_orden_servicio], onDelete: Cascade)
+  Repuesto          Repuesto      @relation(fields: [id_repuesto], references: [id_repuesto], onDelete: Cascade)
+
+  @@id([id_orden_servicio, id_repuesto])
+}
+
+model RepuestoVenta {
+  id_venta     Int
+  id_repuesto  Int
+  cantidad     Int
+  precio       Decimal      @db.Decimal(12, 2)
+  Repuesto     Repuesto     @relation(fields: [id_repuesto], references: [id_repuesto], onDelete: Cascade)
+  VentaDirecta VentaDirecta @relation(fields: [id_venta], references: [id_venta], onDelete: Cascade)
+
+  @@id([id_venta, id_repuesto])
+}
+
+model Servicio {
+  id_servicio           Int                     @id @default(autoincrement())
+  nombre_servicio       String                  @unique @db.VarChar(255)
+  ServicioOrdenServicio ServicioOrdenServicio[]
+  reserva               reserva[]
+  serviciodetalle       serviciodetalle[]
+}
+
+model ServicioOrdenServicio {
+  id_orden_servicio Int
+  id_servicio       Int
+  precio            Decimal       @db.Decimal(12, 2)
+  OrdenServicio     OrdenServicio @relation(fields: [id_orden_servicio], references: [id_orden_servicio], onDelete: Cascade)
+  Servicio          Servicio      @relation(fields: [id_servicio], references: [id_servicio], onDelete: Cascade)
+
+  @@id([id_orden_servicio, id_servicio])
+}
+
+model Usuario {
+  id_usuario     Int    @id @default(autoincrement())
+  nombre_usuario String @db.VarChar(50)
+  email          String @unique @db.VarChar(100)
+  password       String @db.VarChar(255)
+  rol            Rol
+}
+
+model VentaDirecta {
+  id_venta           Int             @id @default(autoincrement())
+  fecha              DateTime        @default(now())
+  pago_efectivo      Decimal         @default(0) @db.Decimal(12, 2)
+  pago_tarjeta       Decimal         @default(0) @db.Decimal(12, 2)
+  pago_transferencia Decimal         @default(0) @db.Decimal(12, 2)
+  subtotal           Decimal         @default(0) @db.Decimal(12, 2)
+  iva                Decimal         @default(0) @db.Decimal(12, 2)
+  total              Decimal         @db.Decimal(12, 2)
+  id_cliente         Int
+  descuento          Decimal         @default(0) @db.Decimal(12, 2)
+  vendedor           String          @default("Por asignar") @db.VarChar(100)
+  Factura            Factura?
+  RepuestoVenta      RepuestoVenta[]
+  Cliente            Cliente         @relation(fields: [id_cliente], references: [id_cliente], onDelete: Cascade)
+}
+
+model mecanico {
+  id_mecanico     Int               @id @default(autoincrement())
+  nombre          String            @db.VarChar(100)
+  apellido        String            @db.VarChar(100)
+  telefono        String?           @db.VarChar(20)
+  correo          String?           @db.VarChar(100)
+  direccion       String?           @db.VarChar(200)
+  cedula          String            @unique @db.VarChar(20)
+  mecanicodetalle mecanicodetalle[]
+}
+
+model mecanicodetalle {
+  id_mecanicodetalle   Int      @id @default(autoincrement())
+  id_mecanico          Int      @unique
+  salario              Decimal  @db.Decimal(12, 2)
+  horario              String?  @db.VarChar(100)
+  tipo_mecanico        String?  @db.VarChar(50)
+  servicios_realizados Int?
+  experiencia_anhos    Int?
+  mecanico             mecanico @relation(fields: [id_mecanico], references: [id_mecanico], onDelete: NoAction, onUpdate: NoAction, map: "fk_mecanico")
+}
+
+model notificaciones {
+  id_notificaciones                                             Int             @id @default(autoincrement())
+  id_orden_servicio                                             Int             @unique
+  fecha_notificacion                                            DateTime        @db.Timestamp(6)
+  email                                                         String          @db.VarChar(100)
+  OrdenServicio_OrdenServicio_id_notificacionesTonotificaciones OrdenServicio[] @relation("OrdenServicio_id_notificacionesTonotificaciones")
+  OrdenServicio_notificaciones_id_orden_servicioToOrdenServicio OrdenServicio   @relation("notificaciones_id_orden_servicioToOrdenServicio", fields: [id_orden_servicio], references: [id_orden_servicio], onDelete: NoAction, onUpdate: NoAction, map: "fk_orden_servicio")
+}
+
+model reserva {
+  id_reserva    Int       @id @default(autoincrement())
+  id_cliente    Int
+  id_servicio   Int?
+  fecha_reserva DateTime  @db.Date
+  Cliente       Cliente   @relation(fields: [id_cliente], references: [id_cliente], onDelete: NoAction, onUpdate: NoAction, map: "fk_cliente")
+  Servicio      Servicio? @relation(fields: [id_servicio], references: [id_servicio], onDelete: NoAction, onUpdate: NoAction, map: "fk_servicio")
+}
+
+model serviciodetalle {
+  id_serviciodetalle Int       @id @default(autoincrement())
+  id_servicio        Int
+  estado             String?   @db.VarChar(50)
+  fecha_realizado    DateTime? @db.Date
+  observaciones      String?
+  precio_servicio    Decimal?  @db.Decimal(12, 2)
+  Servicio           Servicio  @relation(fields: [id_servicio], references: [id_servicio], onDelete: NoAction, onUpdate: NoAction, map: "fk_servicio")
+}
+
+enum Rol {
+  ADMINISTRADOR
+  VENDEDOR
+}
