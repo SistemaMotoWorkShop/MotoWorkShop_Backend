@@ -10,6 +10,7 @@ async findAll(page: number, limit: number, search: string) {
 
     // Crear las condiciones de búsqueda solo si search es válido
     const searchNumber = Number(search);
+    
     const searchConditions = search
     ? {
         OR: [
@@ -21,24 +22,56 @@ async findAll(page: number, limit: number, search: string) {
         }
     : {};
 
+    const searchSql = search
+    ? Prisma.sql`
+      WHERE (
+        ${!isNaN(searchNumber) ? Prisma.sql`"id_orden_servicio" = ${searchNumber}` : Prisma.empty}
+        OR LOWER("mc"."placa") LIKE ${`%${search}%`.toLowerCase()}
+      )
+    `
+    : Prisma.empty;
+
     const [ordenesServicio, total] = await Promise.all([
-    this.prisma.ordenServicio.findMany({
+        this.prisma.$queryRaw<any[]>`
+        SELECT os.*
+        FROM "ordenServicio" os
+        LEFT JOIN "MotoCliente" mc ON mc."id_moto_cliente" = os."id_moto_cliente"
+        ${searchSql}
+        ORDER BY
+            CASE os."estado"
+            WHEN 'PENDIENTE' THEN 1
+            WHEN 'EN_PROCESO' THEN 2
+            WHEN 'COMPLETADO' THEN 3
+            WHEN 'CANCELADO' THEN 4
+            ELSE 99
+            END ASC,
+            os."fecha" DESC
+        LIMIT ${Number(limit)}
+        OFFSET ${skip}
+        `,
+        this.prisma.ordenServicio.count({
         where: searchConditions,
-        orderBy: {
-        fecha: 'desc',
-        },
-        skip,
-        take: Number(limit),
-        include: {
-        MotoCliente: true,
-        ServicioOrdenServicio: { include: { Servicio: true } },
-        RepuestoOrdenServicio: true,
-        },
-    }),
-    this.prisma.ordenServicio.count({
-        where: searchConditions,
-    }),
+        }),
     ]);
+
+    // const [ordenesServicio, total] = await Promise.all([
+    // this.prisma.ordenServicio.findMany({
+    //     where: searchConditions,
+    //     orderBy: {
+    //     fecha: 'desc',
+    //     },
+    //     skip,
+    //     take: Number(limit),
+    //     include: {
+    //     MotoCliente: true,
+    //     ServicioOrdenServicio: { include: { Servicio: true } },
+    //     RepuestoOrdenServicio: true,
+    //     },
+    // }),
+    // this.prisma.ordenServicio.count({
+    //     where: searchConditions,
+    // }),
+    // ]);
 
     const totalPages = Math.ceil(total / limit);
 
