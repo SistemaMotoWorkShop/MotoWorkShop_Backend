@@ -21,58 +21,31 @@ async findAll(page: number, limit: number, search: string) {
         ],
         }
     : {};
+    // Contar el total de registros que coinciden con las condiciones de búsqueda
+    const total = await this.prisma.ordenServicio.count({
+        where: searchConditions,
+    });
 
-    const searchSql = search
-    ? Prisma.sql`
-      WHERE (
-        ${!isNaN(searchNumber) ? Prisma.sql`"id_orden_servicio" = ${searchNumber}` : Prisma.empty}
-        OR LOWER("mc"."placa") LIKE ${`%${search}%`.toLowerCase()}
-      )
-    `
-    : Prisma.empty;
-
-    const [ordenesServicio, total] = await Promise.all([
-        this.prisma.$queryRaw<any[]>`
-        SELECT os.*
-        FROM "ordenServicio" os
-        LEFT JOIN "MotoCliente" mc ON mc."id_moto_cliente" = os."id_moto_cliente"
-        ${searchSql}
+    const ordenesServicio = await this.prisma.$queryRaw<any[]>`
+        SELECT *
+        FROM "OrdenServicio"
+        WHERE
+        ${search
+            ? Prisma.sql`TRUE`
+            : Prisma.sql`TRUE`}
         ORDER BY
-            CASE os."estado"
+        CASE "estado"
             WHEN 'PENDIENTE' THEN 1
             WHEN 'EN_PROCESO' THEN 2
             WHEN 'COMPLETADO' THEN 3
             WHEN 'CANCELADO' THEN 4
             ELSE 99
-            END ASC,
-            os."fecha" DESC
-        LIMIT ${Number(limit)}
-        OFFSET ${skip}
-        `,
-        this.prisma.ordenServicio.count({
-        where: searchConditions,
-        }),
-    ]);
-
-    // const [ordenesServicio, total] = await Promise.all([
-    // this.prisma.ordenServicio.findMany({
-    //     where: searchConditions,
-    //     orderBy: {
-    //     fecha: 'desc',
-    //     },
-    //     skip,
-    //     take: Number(limit),
-    //     include: {
-    //     MotoCliente: true,
-    //     ServicioOrdenServicio: { include: { Servicio: true } },
-    //     RepuestoOrdenServicio: true,
-    //     },
-    // }),
-    // this.prisma.ordenServicio.count({
-    //     where: searchConditions,
-    // }),
-    // ]);
-
+        END ASC,
+        "id_orden_servicio" DESC
+        LIMIT ${Number(limit)} OFFSET ${skip}
+    `;
+    
+    // Calcular el total de páginas
     const totalPages = Math.ceil(total / limit);
 
     return {
