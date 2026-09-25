@@ -9,95 +9,6 @@ export class OrdenServicioService {
         const skip = (page - 1) * limit;
         const searchNumber = Number(search);
 
-<<<<<<< HEAD
-    // Crear las condiciones de búsqueda solo si search es válido
-    const searchNumber = Number(search);
-    
-    const searchConditions = search
-    ? {
-        OR: [
-            // Solo incluir la condición del ID si es un número válido
-            ...((!isNaN(searchNumber)) ? [{ id_orden_servicio: searchNumber }] : []),
-            // Siempre incluir la búsqueda por placa
-            { MotoCliente: { placa: { contains: search, mode: Prisma.QueryMode.insensitive } } },
-        ],
-        }
-    : {};
-    // Contar el total de registros que coinciden con las condiciones de búsqueda
-    const total = await this.prisma.ordenServicio.count({
-        where: searchConditions,
-    });
-
-    const ordenesServicio = await this.prisma.$queryRaw<any[]>`
-        SELECT *
-        FROM "OrdenServicio"
-        WHERE
-        ${search
-            ? Prisma.sql`TRUE`
-            : Prisma.sql`TRUE`}
-        ORDER BY
-        CASE "estado"
-            WHEN 'PENDIENTE' THEN 1
-            WHEN 'EN_PROCESO' THEN 2
-            WHEN 'COMPLETADO' THEN 3
-            WHEN 'CANCELADO' THEN 4
-            ELSE 99
-        END ASC,
-        "id_orden_servicio" DESC
-        LIMIT ${Number(limit)} OFFSET ${skip}
-    `;
-    
-    // Calcular el total de páginas
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-    ordenesServicio,
-    totalPages,
-    currentPage: page,
-    };
-}
-
-async findOne(id: number) {
-    return this.prisma.ordenServicio.findUnique({
-    where: { id_orden_servicio: id },
-    include: {
-        MotoCliente: {
-            include: { Cliente: true },
-        },
-        ServicioOrdenServicio: {
-        include: { Servicio: true },
-        },
-        RepuestoOrdenServicio: {
-        include: { Repuesto: true },
-        },
-        Factura: true,
-    },
-    });
-}
-async create(data: any) {
-    try {
-        const existingMotoCliente = await this.prisma.motoCliente.findUnique({
-            where: { id_moto_cliente: data.id_moto_cliente },
-        });
-        if (!existingMotoCliente) {
-            throw new ConflictException('La moto cliente no existe.');
-        }
-        if(data.estado !== 'PENDIENTE'){
-            throw new ConflictException('Para crear una orden debe estar en estado pendiente.');
-        }
-        // Validar stock de repuestos
-        if (data.repuestos && data.repuestos.length > 0) {
-            for (const repuesto of data.repuestos) {
-                const repuestoEnStock = await this.prisma.repuesto.findUnique({
-                    where: { id_repuesto: repuesto.id_repuesto },
-                });
-                if (!repuestoEnStock) {
-                    throw new ConflictException(`El repuesto con ID ${repuesto.id_repuesto} no existe.`);
-                }
-                if (repuestoEnStock.stock < repuesto.cantidad) {
-                    throw new ConflictException(`No hay suficiente stock para el repuesto: ${repuestoEnStock.nombre_repuesto} hay en stock ${repuestoEnStock.stock} y se solicitan ${repuesto.cantidad}`);
-                }
-=======
         const searchConditions = search
             ? {
                 OR: [
@@ -113,7 +24,6 @@ async create(data: any) {
                         },
                     },
                 ],
->>>>>>> ded228f (fix: Placa en lista de orden de servicio)
             }
             : {};
 
