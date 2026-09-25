@@ -10,6 +10,7 @@ async findAll(page: number, limit: number, search: string) {
 
     // Crear las condiciones de búsqueda solo si search es válido
     const searchNumber = Number(search);
+    
     const searchConditions = search
     ? {
         OR: [
